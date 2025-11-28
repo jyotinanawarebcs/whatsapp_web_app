@@ -1,8 +1,9 @@
+// Contacts.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Upload, Download, Users, Tag, Trash2, FileText, X, Edit, Check } from "lucide-react";
+import { Plus, Search, Upload, Download, Users, Tag, Trash2, FileText, X, Edit, Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { contactsAPI } from "@/services/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -19,7 +20,7 @@ import {
 
 interface Contact {
   id: number;
-  name:string;
+  name: string;
   phone: string;
   source_file: string | null;
   is_active: boolean;
@@ -29,6 +30,20 @@ interface Contact {
 interface ContactFile {
   filename: string;
   count: number;
+}
+
+interface PaginationInfo {
+  current_page: number;
+  total_pages: number;
+  total_items: number;
+  has_next: boolean;
+  has_previous: boolean;
+  page_size: number;
+}
+
+interface ContactsResponse {
+  contacts: Contact[];
+  pagination: PaginationInfo;
 }
 
 const Contacts = () => {
@@ -42,6 +57,28 @@ const Contacts = () => {
   const [activeContacts, setActiveContacts] = useState(0);
   const [fileCount, setFileCount] = useState(0);
   
+  // File contacts pagination states
+  const [filePagination, setFilePagination] = useState<PaginationInfo>({
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    has_next: false,
+    has_previous: false,
+    page_size: 10
+  });
+  const [filePageSize, setFilePageSize] = useState(10);
+
+  // Pagination states
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    has_next: false,
+    has_previous: false,
+    page_size: 10
+  });
+  const [pageSize, setPageSize] = useState(10);
+  
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -49,86 +86,112 @@ const Contacts = () => {
   const [openFileDialog, setOpenFileDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContacts, setFileContacts] = useState<Contact[]>([]);
+  const [loadingFileContacts, setLoadingFileContacts] = useState(false);
   
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
   
   const [editContact, setEditContact] = useState<Contact | null>(null);
   const [editedPhone, setEditedPhone] = useState("");
-  
+
   // Fetch all contacts and files
   useEffect(() => {
     fetchContacts();
     fetchContactFiles();
   }, []);
   
-  // Fetch files when dialog opens
-  useEffect(() => {
-    if (openFileDialog) {
-      console.log('Dialog opened, fetching file data...');
-      fetchContactFiles();
-    }
-  }, [openFileDialog]);
-  
   // Update statistics whenever contacts change
   useEffect(() => {
-    setTotalContacts(contacts.length);
+    setTotalContacts(pagination.total_items);
     setActiveContacts(contacts.filter(c => c.is_active).length);
-    console.log(`Updated contact stats: ${contacts.length} total, ${contacts.filter(c => c.is_active).length} active`);
-  }, [contacts]);
+  }, [contacts, pagination.total_items]);
   
   // Update file count when contactFiles changes
   useEffect(() => {
-    // Count all files, not just those with contacts
     setFileCount(contactFiles.length);
-    console.log(`Updated file count: ${contactFiles.length} total files`);
   }, [contactFiles]);
-  
-  // Force refresh of data on component mount
-  useEffect(() => {
-    const initialLoad = async () => {
-      console.log('Initial data load');
-      await fetchContacts();
-      await fetchContactFiles();
-    };
-    
-    initialLoad();
-  }, []);
-  
-  // Periodically refresh file count
-  useEffect(() => {
-    // Refresh file count every 30 seconds
-    const intervalId = setInterval(async () => {
-      console.log('Auto-refreshing file count...');
-      try {
-        const updatedFiles = await contactsAPI.getFiles(`?t=${new Date().getTime()}`);
-        if (Array.isArray(updatedFiles) && 
-            updatedFiles.length !== contactFiles.length) {
-          console.log(`File count changed: ${contactFiles.length} -> ${updatedFiles.length}`);
-          setContactFiles(updatedFiles);
-          setFileCount(updatedFiles.length);
-        }
-      } catch (err) {
-        console.error('Error auto-refreshing file count:', err);
-      }
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [contactFiles.length]);
-  
-  const fetchContacts = async () => {
+
+  // Fetch contacts with pagination
+  const fetchContacts = async (page: number = 1, size: number = pageSize) => {
     try {
       setLoading(true);
-      const data = await contactsAPI.getAll();
-      setContacts(data);
-      setTotalContacts(data.length);
-      setActiveContacts(data.filter(c => c.is_active).length);
-    } catch (err) {
+      console.log(`Fetching contacts - Page: ${page}, Size: ${size}`);
+      
+      const data = await contactsAPI.getAll(page, size);
+      console.log('Received data:', data);
+      
+      // Handle different response formats
+      if (data.contacts && Array.isArray(data.contacts)) {
+        setContacts(data.contacts);
+        
+        if (data.pagination) {
+          setPagination(data.pagination);
+          setTotalContacts(data.pagination.total_items);
+        } else {
+          // Fallback if no pagination data
+          setPagination({
+            current_page: page,
+            total_pages: 1,
+            total_items: data.contacts.length,
+            has_next: false,
+            has_previous: page > 1,
+            page_size: size
+          });
+          setTotalContacts(data.contacts.length);
+        }
+        
+        setActiveContacts(data.contacts.filter((c: Contact) => c.is_active).length);
+      } else if (Array.isArray(data)) {
+        // If API returns direct array without pagination
+        setContacts(data);
+        const totalItems = data.length;
+        const totalPages = Math.ceil(totalItems / size);
+        
+        setPagination({
+          current_page: page,
+          total_pages: totalPages,
+          total_items: totalItems,
+          has_next: page < totalPages,
+          has_previous: page > 1,
+          page_size: size
+        });
+        setTotalContacts(totalItems);
+        setActiveContacts(data.filter((c: Contact) => c.is_active).length);
+      } else {
+        // Empty state
+        setContacts([]);
+        setPagination({
+          current_page: 1,
+          total_pages: 1,
+          total_items: 0,
+          has_next: false,
+          has_previous: false,
+          page_size: size
+        });
+        setTotalContacts(0);
+        setActiveContacts(0);
+      }
+      
+    } catch (err: any) {
+      console.error('Error fetching contacts:', err);
       toast({
         title: "Error fetching contacts",
-        description: "Failed to load contact data.",
+        description: err.message || "Failed to load contact data.",
         variant: "destructive",
       });
+      
+      // Set empty state on error
+      setContacts([]);
+      setPagination({
+        current_page: 1,
+        total_pages: 1,
+        total_items: 0,
+        has_next: false,
+        has_previous: false,
+        page_size: pageSize
+      });
+      setTotalContacts(0);
+      setActiveContacts(0);
     } finally {
       setLoading(false);
     }
@@ -136,46 +199,25 @@ const Contacts = () => {
   
   const fetchContactFiles = async () => {
     try {
-      // Only set loading state if we're not already loading
-      if (!loadingFiles) {
-        setLoadingFiles(true);
-      }
-      
+      setLoadingFiles(true);
       console.log('Fetching contact files...');
       
-      // Add a timestamp to prevent caching
-      const timestamp = new Date().getTime();
-      const data = await contactsAPI.getFiles(`?t=${timestamp}`);
+      const data = await contactsAPI.getFiles();
       
-      // Make sure we have valid data
       if (Array.isArray(data)) {
         console.log(`Received ${data.length} contact files:`, data);
-        
-        // Only update state if the data has actually changed
-        const currentFilenames = contactFiles.map(f => f.filename).sort().join(',');
-        const newFilenames = data.map(f => f.filename).sort().join(',');
-        
-        if (currentFilenames !== newFilenames || 
-            contactFiles.length !== data.length) {
-          console.log('Contact files have changed, updating state');
-          setContactFiles(data);
-          
-          // Update the contact files count in the stats - show all files
-          console.log(`Found ${data.length} total files`);
-          setFileCount(data.length);
-        } else {
-          console.log('Contact files unchanged, no state update needed');
-        }
+        setContactFiles(data);
+        setFileCount(data.length);
       } else {
         console.error('Received invalid data format for contact files:', data);
         setContactFiles([]);
         setFileCount(0);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching contact files:', err);
       toast({
         title: "Error fetching contact files",
-        description: "Failed to load file data.",
+        description: err.message || "Failed to load file data.",
         variant: "destructive",
       });
       setContactFiles([]);
@@ -185,6 +227,17 @@ const Contacts = () => {
     }
   };
   
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.total_pages) {
+      fetchContacts(newPage, pageSize);
+    }
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    fetchContacts(1, newSize);
+  };
+
   const handleUpload = async () => {
     if (!uploadFile) return;
     
@@ -203,10 +256,10 @@ const Contacts = () => {
       }
       
       // Check file size
-      if (uploadFile.size > 100* 1024 * 1024) { // 10MB limit
+      if (uploadFile.size > 100 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Please upload a file smaller than 10MB.",
+          description: "Please upload a file smaller than 100MB.",
           variant: "destructive",
         });
         return;
@@ -222,7 +275,7 @@ const Contacts = () => {
       } else {
         toast({
           title: "File processed",
-          description: `No contacts found in ${result.originalname}. Please make sure your file contains phone numbers in the first column or in a column with a header containing 'phone', 'number', 'mobile', etc.`,
+          description: `No contacts found in ${result.originalname}. Please make sure your file contains phone numbers.`,
           variant: "destructive",
           duration: 6000,
         });
@@ -231,46 +284,159 @@ const Contacts = () => {
       setOpenUploadDialog(false);
       setUploadFile(null);
       
-      // Refresh data and update file count immediately
-      await fetchContacts();
+      // Refresh data
+      await fetchContacts(1, pageSize);
       await fetchContactFiles();
       
-      // Force an immediate update of the file count
-      const updatedFiles = await contactsAPI.getFiles(`?t=${new Date().getTime()}`);
-      if (Array.isArray(updatedFiles)) {
-        console.log(`Immediate file count update: ${updatedFiles.length} files`);
-        setFileCount(updatedFiles.length);
-      }
     } catch (err: any) {
       console.error('Upload error:', err);
       toast({
         title: "Upload failed",
-        description: err?.response?.data?.message || "There was an error uploading your file.",
+        description: err.message || "There was an error uploading your file.",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
     }
   };
-  
-  const handleViewFile = async (filename: string) => {
-    console.log(`Viewing file: ${filename}`);
+
+  const handleViewFile = async (filename: string, page: number = 1, size: number = filePageSize) => {
+    console.log(`Viewing file: ${filename}, Page: ${page}, Size: ${size}`);
     setSelectedFile(filename);
+    setLoadingFileContacts(true);
+    
     try {
-      const data = await contactsAPI.getContactsByFile(filename);
-      console.log(`Received ${data.length} contacts for file ${filename}:`, data);
-      setFileContacts(data);
-      setOpenFileDialog(true);
+      // Backend pagination ke saath API call karo
+      const data = await contactsAPI.getContactsByFile(filename, page, size);
+      console.log('Raw file contacts response:', data);
+      
+      let contactsArray: Contact[] = [];
+      let paginationData: PaginationInfo | null = null;
+      
+      if (data.contacts && Array.isArray(data.contacts)) {
+        // Backend se paginated data mila hai
+        contactsArray = data.contacts;
+        
+        if (data.pagination) {
+          // Backend pagination data use karo
+          paginationData = data.pagination;
+          console.log('Using backend pagination:', paginationData);
+        }
+      } else if (Array.isArray(data)) {
+        // Fallback: Direct array mila (frontend pagination)
+        contactsArray = data;
+        const totalItems = data.length;
+        const totalPages = Math.ceil(totalItems / size);
+        
+        paginationData = {
+          current_page: page,
+          total_pages: totalPages,
+          total_items: totalItems,
+          has_next: page < totalPages,
+          has_previous: page > 1,
+          page_size: size
+        };
+      } else if (data && typeof data === 'object') {
+        // Try to extract contacts from different response formats
+        if (Array.isArray(data.data)) contactsArray = data.data;
+        else if (Array.isArray(data.results)) contactsArray = data.results;
+        else if (Array.isArray(data.items)) contactsArray = data.items;
+        
+        // Extract pagination info if available
+        if (data.pagination) {
+          paginationData = data.pagination;
+        } else if (data.total || data.total_items) {
+          const totalItems = data.total || data.total_items || contactsArray.length;
+          const totalPages = Math.ceil(totalItems / size);
+          
+          paginationData = {
+            current_page: page,
+            total_pages: totalPages,
+            total_items: totalItems,
+            has_next: page < totalPages,
+            has_previous: page > 1,
+            page_size: size
+          };
+        }
+      }
+      
+      console.log(`Final contacts array:`, contactsArray);
+      console.log(`Pagination data:`, paginationData);
+      
+      setFileContacts(contactsArray);
+      
+      if (paginationData) {
+        setFilePagination(paginationData);
+      } else {
+        // Fallback agar koi pagination data nahi mila
+        setFilePagination({
+          current_page: page,
+          total_pages: 1,
+          total_items: contactsArray.length,
+          has_next: false,
+          has_previous: false,
+          page_size: size
+        });
+      }
+      
     } catch (err: any) {
       console.error(`Error loading contacts from file ${filename}:`, err);
       toast({
         title: "Error",
-        description: err?.response?.data?.message || "Failed to load contacts from file.",
+        description: err.message || "Failed to load contacts from file.",
         variant: "destructive",
       });
+      setFileContacts([]);
+      setFilePagination({
+        current_page: 1,
+        total_pages: 1,
+        total_items: 0,
+        has_next: false,
+        has_previous: false,
+        page_size: filePageSize
+      });
+    } finally {
+      setLoadingFileContacts(false);
     }
   };
-  
+
+  // File contacts pagination handlers
+  const handleFilePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= filePagination.total_pages && selectedFile) {
+      handleViewFile(selectedFile, newPage, filePageSize);
+    }
+  };
+
+  const handleFilePageSizeChange = (newSize: number) => {
+    setFilePageSize(newSize);
+    if (selectedFile) {
+      handleViewFile(selectedFile, 1, newSize);
+    }
+  };
+
+  // File contacts page numbers generator
+  const generateFilePageNumbers = () => {
+    const pages = [];
+    const totalPages = filePagination.total_pages;
+    const currentPage = filePagination.current_page;
+    
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
   const handleDeleteFile = async () => {
     if (!fileToDelete) return;
     
@@ -284,34 +450,19 @@ const Contacts = () => {
       
       toast({
         title: "File deleted",
-        description: `All ${result.count} contacts from ${fileToDelete} have been removed.`,
+        description: `All contacts from ${fileToDelete} have been removed.`,
       });
       
-      // Close dialogs and reset state
       setOpenDeleteDialog(false);
       setFileToDelete(null);
       setSelectedFile(null);
       setFileContacts([]);
       
-      // Refresh data with a slight delay to ensure backend has processed everything
+      // Refresh data
       setTimeout(async () => {
         try {
-          // First refresh contacts
-          await fetchContacts();
-          
-          // Then refresh files
+          await fetchContacts(1, pageSize);
           await fetchContactFiles();
-          
-          // Force an immediate update of the file count with a third request
-          // This ensures the UI is updated even if the backend is slow
-          const updatedFiles = await contactsAPI.getFiles(`?t=${new Date().getTime()}`);
-          if (Array.isArray(updatedFiles)) {
-            console.log(`Immediate file count update after deletion: ${updatedFiles.length} files`);
-            setFileCount(updatedFiles.length);
-            
-            // Also update the contact files list
-            setContactFiles(updatedFiles);
-          }
         } catch (refreshError) {
           console.error('Error refreshing data after deletion:', refreshError);
         } finally {
@@ -323,14 +474,16 @@ const Contacts = () => {
       setLoadingFiles(false);
       toast({
         title: "Error",
-        description: err?.response?.data?.message || "Failed to delete contacts.",
+        description: err.message || "Failed to delete contacts.",
         variant: "destructive",
       });
     }
   };
-  
+
   const handleDeleteContact = async (id: number) => {
     try {
+      console.log(`Deleting contact with ID: ${id}`);
+      
       // Find the contact to be deleted to get its source_file
       const contactToDelete = contacts.find(c => c.id === id);
       const sourceFile = contactToDelete?.source_file;
@@ -343,28 +496,33 @@ const Contacts = () => {
       });
       
       // Refresh all data
-      await fetchContacts();
+      await fetchContacts(pagination.current_page, pageSize);
       
-      // If we're viewing a specific file, refresh its contacts
+      // If we're viewing a specific file, refresh its contacts with current pagination
       if (selectedFile) {
-        const data = await contactsAPI.getContactsByFile(selectedFile);
-        setFileContacts(data);
+        console.log(`Refreshing file contacts for: ${selectedFile}`);
+        try {
+          await handleViewFile(selectedFile, filePagination.current_page, filePageSize);
+        } catch (refreshError) {
+          console.error('Error refreshing file contacts:', refreshError);
+        }
       }
       
       // If the deleted contact was from a file, refresh the file list
       if (sourceFile) {
         await fetchContactFiles();
       }
+      
     } catch (err: any) {
       console.error('Delete contact error:', err);
       toast({
         title: "Error",
-        description: err?.response?.data?.message || "Failed to delete contact.",
+        description: err.message || "Failed to delete contact.",
         variant: "destructive",
       });
     }
   };
-  
+
   const handleEditContact = async () => {
     if (!editContact) return;
     
@@ -379,26 +537,81 @@ const Contacts = () => {
       });
       
       setEditContact(null);
-      fetchContacts();
+      await fetchContacts(pagination.current_page, pageSize);
+      
       if (selectedFile) {
-        const data = await contactsAPI.getContactsByFile(selectedFile);
-        setFileContacts(data);
+        await handleViewFile(selectedFile, filePagination.current_page, filePageSize);
       }
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "Error",
-        description: "Failed to update contact.",
+        description: err.message || "Failed to update contact.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateContact = async () => {
+    if (!editedPhone.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await contactsAPI.create({ phone: editedPhone });
+      
+      toast({
+        title: "Contact created",
+        description: "New contact has been added.",
+      });
+      
+      setEditContact(null);
+      setEditedPhone("");
+      await fetchContacts(1, pageSize);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create contact.",
         variant: "destructive",
       });
     }
   };
   
   const filteredContacts = contacts.filter(contact => 
-    contact.phone.toLowerCase().includes(search.toLowerCase())
+    contact.phone.toLowerCase().includes(search.toLowerCase()) ||
+    (contact.name && contact.name.toLowerCase().includes(search.toLowerCase()))
   );
-  
+
+  // Generate page numbers for pagination
+  const generatePageNumbers = () => {
+    const pages = [];
+    const totalPages = pagination.total_pages;
+    const currentPage = pagination.current_page;
+    
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-6">
+        {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Contacts</h1>
@@ -426,6 +639,7 @@ const Contacts = () => {
           </div>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid gap-6 sm:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center gap-4">
@@ -462,14 +676,7 @@ const Contacts = () => {
               </div>
               <button 
                 className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-accent/50 transition-colors"
-                onClick={async () => {
-                  console.log('Refreshing file count...');
-                  await fetchContactFiles();
-                  const updatedFiles = await contactsAPI.getFiles(`?t=${new Date().getTime()}`);
-                  if (Array.isArray(updatedFiles)) {
-                    setFileCount(updatedFiles.length);
-                  }
-                }}
+                onClick={fetchContactFiles}
                 title="Refresh file count"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21h5v-5"></path></svg>
@@ -478,6 +685,7 @@ const Contacts = () => {
           </div>
         </div>
 
+        {/* Search and Refresh */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -492,18 +700,19 @@ const Contacts = () => {
             variant="outline" 
             className="w-full sm:w-auto"
             disabled={loading}
-            onClick={fetchContacts}
+            onClick={() => fetchContacts(1, pageSize)}
           >
             <Users className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
 
+        {/* Contacts Table */}
         <div className="rounded-lg border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border">
-                <TableHead>name</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Phone Number</TableHead>
                 <TableHead>Source File</TableHead>
                 <TableHead>Status</TableHead>
@@ -514,20 +723,20 @@ const Contacts = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    Loading contacts...v
+                  <TableCell colSpan={6} className="text-center py-8">
+                    Loading contacts...
                   </TableCell>
                 </TableRow>
               ) : filteredContacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    No contacts found.
+                  <TableCell colSpan={6} className="text-center py-8">
+                    {search ? "No contacts match your search." : "No contacts found."}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredContacts.map((contact) => (
                   <TableRow key={contact.id} className="border-border">
-                  <TableCell>{contact.name || <i className="text-muted-foreground">N/A</i>}</TableCell>  {/* NEW */}
+                    <TableCell>{contact.name || <i className="text-muted-foreground">N/A</i>}</TableCell>
                     <TableCell className="font-medium">{contact.phone}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {contact.source_file ? (
@@ -540,7 +749,7 @@ const Contacts = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={contact.is_active ? "default" : "secondary"} className={`text-xs ${contact.is_active ? "text-green-600" : ""}`}>
+                      <Badge variant={contact.is_active ? "default" : "secondary"} className={`text-xs ${contact.is_active ? "text-white" : ""}`}>
                         {contact.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
@@ -575,6 +784,98 @@ const Contacts = () => {
           </Table>
         </div>
 
+        {/* Pagination Controls - Only show if there are multiple pages */}
+        {pagination.total_pages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 py-4 border-t border-border">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="page-size" className="text-sm text-muted-foreground whitespace-nowrap">
+                Rows per page:
+              </Label>
+              <select
+                id="page-size"
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="h-9 rounded-md border border-input bg-[#101729] text-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+
+            {/* Page Info */}
+            <div className="text-sm text-muted-foreground whitespace-nowrap">
+              Page {pagination.current_page} of {pagination.total_pages} •{" "}
+              {pagination.total_items.toLocaleString()} total contacts
+            </div>
+
+            {/* Pagination Buttons */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(1)}
+                disabled={pagination.current_page === 1}
+                className="hidden sm:flex h-9 w-9 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page - 1)}
+                disabled={!pagination.has_previous}
+                className="h-9 w-9 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {generatePageNumbers().map((pageNum, index) => (
+                  pageNum === '...' ? (
+                    <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={pageNum}
+                      variant={pagination.current_page === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum as number)}
+                      className="h-9 w-9 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page + 1)}
+                disabled={!pagination.has_next}
+                className="h-9 w-9 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.total_pages)}
+                disabled={pagination.current_page === pagination.total_pages}
+                className="hidden sm:flex h-9 w-9 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {/* Add Contact Button */}
       <Button
         size="lg"
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl hover:shadow-2xl"
@@ -625,13 +926,8 @@ const Contacts = () => {
       </Dialog>
 
       {/* Manage Files Dialog */}
-      <Dialog open={openFileDialog} onOpenChange={(open) => {
-        // Only update if we're closing the dialog
-        if (!open) {
-          setOpenFileDialog(false);
-        }
-      }}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={openFileDialog} onOpenChange={setOpenFileDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <div className="flex justify-between items-center">
               <div>
@@ -643,7 +939,7 @@ const Contacts = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => fetchContactFiles()}
+                onClick={fetchContactFiles}
                 disabled={loadingFiles}
               >
                 {loadingFiles ? (
@@ -661,16 +957,19 @@ const Contacts = () => {
             </div>
           </DialogHeader>
           
-          <div className="py-4">
+          <div className="py-4 flex-1 overflow-auto">
             {selectedFile ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     <h3 className="font-medium">{selectedFile}</h3>
-                    <Badge variant="outline">{fileContacts.length} contacts</Badge>
+                    <Badge variant="outline">{filePagination.total_items.toLocaleString()} contacts</Badge>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedFile(null)}>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setSelectedFile(null);
+                    setFileContacts([]);
+                  }}>
                     <X className="h-4 w-4" />
                     Close
                   </Button>
@@ -687,22 +986,33 @@ const Contacts = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {fileContacts.length === 0 ? (
+                      {loadingFileContacts ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                              <p className="text-muted-foreground">Loading contacts...</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : fileContacts.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center py-4">
-                            No contacts in this file.
+                            No contacts found in this file.
                           </TableCell>
                         </TableRow>
                       ) : (
                         fileContacts.map((contact) => (
                           <TableRow key={contact.id}>
-                            <TableCell>{contact.phone}</TableCell>
+                            <TableCell className="font-medium">{contact.phone}</TableCell>
                             <TableCell>
-                              <Badge variant={contact.is_active ? "default" : "secondary"} className="text-xs text-green-600">
+                              <Badge variant={contact.is_active ? "default" : "secondary"} className="text-xs">
                                 {contact.is_active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
-                            <TableCell>{new Date(contact.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(contact.created_at).toLocaleDateString()}
+                            </TableCell>
                             <TableCell className="text-right">
                               <Button 
                                 variant="ghost" 
@@ -719,7 +1029,98 @@ const Contacts = () => {
                   </Table>
                 </div>
                 
-                <div className="flex justify-between">
+                {/* FILE CONTACTS PAGINATION */}
+                {filePagination.total_pages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 py-4 border-t border-border">
+                    {/* Page Size Selector */}
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="file-page-size" className="text-sm text-muted-foreground whitespace-nowrap">
+                        Rows per page:
+                      </Label>
+                      <select
+                        id="file-page-size"
+                        value={filePageSize}
+                        onChange={(e) => handleFilePageSizeChange(Number(e.target.value))}
+                        className="h-9 rounded-md border border-input bg-[#101729] text-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                      </select>
+                    </div>
+
+                    {/* Page Info */}
+                    <div className="text-sm text-muted-foreground whitespace-nowrap">
+                      Page {filePagination.current_page} of {filePagination.total_pages} •{" "}
+                      {filePagination.total_items.toLocaleString()} contacts
+                    </div>
+
+                    {/* Pagination Buttons */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFilePageChange(1)}
+                        disabled={filePagination.current_page === 1}
+                        className="h-9 w-9 p-0"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFilePageChange(filePagination.current_page - 1)}
+                        disabled={!filePagination.has_previous}
+                        className="h-9 w-9 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {generateFilePageNumbers().map((pageNum, index) => (
+                          pageNum === '...' ? (
+                            <span key={`file-ellipsis-${index}`} className="px-2 text-muted-foreground">
+                              ...
+                            </span>
+                          ) : (
+                            <Button
+                              key={pageNum}
+                              variant={filePagination.current_page === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleFilePageChange(pageNum as number)}
+                              className="h-9 w-9 p-0"
+                            >
+                              {pageNum}
+                            </Button>
+                          )
+                        ))}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFilePageChange(filePagination.current_page + 1)}
+                        disabled={!filePagination.has_next}
+                        className="h-9 w-9 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFilePageChange(filePagination.total_pages)}
+                        disabled={filePagination.current_page === filePagination.total_pages}
+                        className="h-9 w-9 p-0"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-4">
                   <Button 
                     variant="destructive" 
                     onClick={() => {
@@ -730,7 +1131,10 @@ const Contacts = () => {
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete All Contacts
                   </Button>
-                  <Button variant="outline" onClick={() => setSelectedFile(null)}>Back to Files</Button>
+                  <Button variant="outline" onClick={() => {
+                    setSelectedFile(null);
+                    setFileContacts([]);
+                  }}>Back to Files</Button>
                 </div>
               </div>
             ) : (
@@ -756,15 +1160,6 @@ const Contacts = () => {
                         <Upload className="h-4 w-4 mr-2" />
                         Upload Contacts
                       </Button>
-                      <Button 
-                        variant="secondary"
-                        onClick={() => {
-                          console.log('Current contact files:', contactFiles);
-                          fetchContactFiles();
-                        }}
-                      >
-                        Debug File Data
-                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -772,14 +1167,14 @@ const Contacts = () => {
                     {contactFiles.map((file) => (
                       <div 
                         key={file.filename} 
-                        className="border rounded-lg p-4 flex justify-between items-center hover:bg-accent/50 cursor-pointer"
+                        className="border rounded-lg p-4 flex justify-between items-center hover:bg-accent/50 cursor-pointer transition-colors"
                         onClick={() => handleViewFile(file.filename)}
                       >
                         <div className="flex items-center gap-3">
                           <FileText className="h-8 w-8 text-primary" />
                           <div>
-                            <p className="font-medium">{file.filename}</p>
-                            <p className="text-sm text-muted-foreground">{file.count} contacts</p>
+                            <p className="font-medium text-sm">{file.filename}</p>
+                            <p className="text-sm text-muted-foreground">{file.count.toLocaleString()} contacts</p>
                           </div>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -812,7 +1207,7 @@ const Contacts = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit Contact Dialog */}
+      {/* Edit/Create Contact Dialog */}
       <Dialog open={!!editContact} onOpenChange={(open) => !open && setEditContact(null)}>
         <DialogContent>
           <DialogHeader>
@@ -833,9 +1228,9 @@ const Contacts = () => {
           
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setEditContact(null)}>Cancel</Button>
-            <Button onClick={handleEditContact}>
+            <Button onClick={editContact ? handleEditContact : handleCreateContact}>
               <Check className="h-4 w-4 mr-2" />
-              Save
+              {editContact ? "Save" : "Create"}
             </Button>
           </div>
         </DialogContent>

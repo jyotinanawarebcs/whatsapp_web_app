@@ -728,57 +728,57 @@ const getFixedDashboardStats = () => {
   };
 };
 
-export const campaignsAPI = {
-  getAll: async (): Promise<Campaign[]> => {
-    const res = await api.get<Campaign[]>('/campaigns');
-    return res.data;
-  },
+// export const campaignsAPI = {
+//   getAll: async (): Promise<Campaign[]> => {
+//     const res = await api.get<Campaign[]>('/campaigns');
+//     return res.data;
+//   },
 
-  getById: async (id: number): Promise<Campaign> => {
-    const res = await api.get<Campaign>(`/campaigns/${id}`);
-    return res.data;
-  },
+//   getById: async (id: number): Promise<Campaign> => {
+//     const res = await api.get<Campaign>(`/campaigns/${id}`);
+//     return res.data;
+//   },
 
-  getRecent: async (limit = 4): Promise<Campaign[]> => {
-    const res = await api.get<Campaign[]>(`/campaigns/recent?limit=${limit}`);
-    return res.data;
-  },
+//   getRecent: async (limit = 4): Promise<Campaign[]> => {
+//     const res = await api.get<Campaign[]>(`/campaigns/recent?limit=${limit}`);
+//     return res.data;
+//   },
 
-  getDashboardStats: async () => {
-    const res = await api.get('/campaigns/stats');
-    return res.data;
-  },
+//   getDashboardStats: async () => {
+//     const res = await api.get('/campaigns/stats');
+//     return res.data;
+//   },
 
-  getActive: async (): Promise<Campaign[]> => {
-    const res = await api.get<Campaign[]>('/campaigns/active-campaigns');
-    return res.data;
-  },
+//   getActive: async (): Promise<Campaign[]> => {
+//     const res = await api.get<Campaign[]>('/campaigns/active-campaigns');
+//     return res.data;
+//   },
 
-  create: async (payload: CampaignPayload): Promise<Campaign> => {
-    const res = await api.post<Campaign>('/campaigns/create', payload);
-    return res.data;
-  },
+//   create: async (payload: CampaignPayload): Promise<Campaign> => {
+//     const res = await api.post<Campaign>('/campaigns/create', payload);
+//     return res.data;
+//   },
 
-  run: async (payload: RunCampaignPayload): Promise<RunCampaignResponse> => {
-    const res = await api.post<RunCampaignResponse>('/campaigns/run', payload);
-    return res.data;
-  },
+//   run: async (payload: RunCampaignPayload): Promise<RunCampaignResponse> => {
+//     const res = await api.post<RunCampaignResponse>('/campaigns/run', payload);
+//     return res.data;
+//   },
 
-  update: async (id: number, payload: Partial<CampaignPayload>): Promise<Campaign> => {
-    const res = await api.patch<Campaign>(`/campaigns/${id}`, payload);
-    return res.data;
-  },
+//   update: async (id: number, payload: Partial<CampaignPayload>): Promise<Campaign> => {
+//     const res = await api.patch<Campaign>(`/campaigns/${id}`, payload);
+//     return res.data;
+//   },
 
-  updateStatus: async (id: number, status: CampaignStatus): Promise<Campaign> => {
-    const res = await api.put<Campaign>(`/campaigns/${id}/status`, { status });
-    return res.data;
-  },
+//   updateStatus: async (id: number, status: CampaignStatus): Promise<Campaign> => {
+//     const res = await api.put<Campaign>(`/campaigns/${id}/status`, { status });
+//     return res.data;
+//   },
 
-  remove: async (id: number) => {
-    const res = await api.delete(`/campaigns/${id}`);
-    return res.data;
-  },
-};
+//   remove: async (id: number) => {
+//     const res = await api.delete(`/campaigns/${id}`);
+//     return res.data;
+//   },
+// };
 
 // Mock data for when backend is not ready
 const mockContacts = [
@@ -795,117 +795,325 @@ const mockFiles = [
   { filename: "sample_file_3.txt", count: 1 },
 ];
 
-export const contactsAPI = {
-  getAll: async () => {
-    try {
-      const res = await api.get("/contacts");
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock contacts data");
-      return mockContacts;
-    }
-  },
+// export const contactsAPI = {
+//   getAll: async () => {
+//     try {
+//       const res = await api.get("/contacts");
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock contacts data");
+//       return mockContacts;
+//     }
+//   },
   
-  create: async (data) => {
-    try {
-      const res = await api.post("/contacts", data);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for create");
-      return { ...data, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
-    }
-  },
-  update: async (id, data) => {
-    try {
-      const res = await api.put(`/contacts/${id}`, data);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for update");
-      return { id, ...data };
-    }
-  },
-  remove: async (id) => {
-    try {
-      const res = await api.delete(`/contacts/${id}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for remove");
-      return { id };
-    }
-  },
-  getFiles: async (queryParams = '') => {
-    try {
-      const res = await api.get(`/contacts/files${queryParams}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock files data");
-      return mockFiles;
-    }
-  },
-  getContactsByFile: async (filename) => {
-    try {
-      const res = await api.get(`/contacts/file/${encodeURIComponent(filename)}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for getContactsByFile");
-      return mockContacts.filter(contact => contact.source_file === filename);
-    }
-  },
-  removeContactsByFile: async (filename) => {
-    try {
-      const res = await api.delete(`/contacts/file/${encodeURIComponent(filename)}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for removeContactsByFile");
-      const count = mockContacts.filter(contact => contact.source_file === filename).length;
-      return { success: true, count, message: `Successfully deleted ${count} contacts from ${filename}` };
-    }
-  },
-  uploadFile: async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+//   create: async (data) => {
+//     try {
+//       const res = await api.post("/contacts", data);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for create");
+//       return { ...data, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
+//     }
+//   },
+//   update: async (id, data) => {
+//     try {
+//       const res = await api.put(`/contacts/${id}`, data);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for update");
+//       return { id, ...data };
+//     }
+//   },
+//   remove: async (id) => {
+//     try {
+//       const res = await api.delete(`/contacts/${id}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for remove");
+//       return { id };
+//     }
+//   },
+//   getFiles: async (queryParams = '') => {
+//     try {
+//       const res = await api.get(`/contacts/files${queryParams}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock files data");
+//       return mockFiles;
+//     }
+//   },
+//   getContactsByFile: async (filename) => {
+//     try {
+//       const res = await api.get(`/contacts/file/${encodeURIComponent(filename)}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for getContactsByFile");
+//       return mockContacts.filter(contact => contact.source_file === filename);
+//     }
+//   },
+//   removeContactsByFile: async (filename) => {
+//     try {
+//       const res = await api.delete(`/contacts/file/${encodeURIComponent(filename)}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for removeContactsByFile");
+//       const count = mockContacts.filter(contact => contact.source_file === filename).length;
+//       return { success: true, count, message: `Successfully deleted ${count} contacts from ${filename}` };
+//     }
+//   },
+//   uploadFile: async (file) => {
+//     try {
+//       const formData = new FormData();
+//       formData.append('file', file);
       
-      const res = await api.post("/contacts/upload", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        // Increase timeout for large files
-        timeout: 30000,
-      });
-      return res.data;
-    } catch (error: any) {
-      console.warn("Backend not ready, using mock data for file upload");
-      // Create a mock response for file upload
-      const filename = file.name;
-      const randomCount = Math.floor(Math.random() * 20) + 5; // Random number between 5 and 25
+//       const res = await api.post("/contacts/upload", formData, {
+//         headers: {
+//           'Content-Type': 'multipart/form-data',
+//         },
+//         // Increase timeout for large files
+//         timeout: 30000,
+//       });
+//       return res.data;
+//     } catch (error: any) {
+//       console.warn("Backend not ready, using mock data for file upload");
+//       // Create a mock response for file upload
+//       const filename = file.name;
+//       const randomCount = Math.floor(Math.random() * 20) + 5; // Random number between 5 and 25
       
-      // Add this file to our mock files if it doesn't exist
-      const existingFileIndex = mockFiles.findIndex(f => f.filename === filename);
-      if (existingFileIndex === -1) {
-        mockFiles.push({ filename, count: randomCount });
-      } else {
-        mockFiles[existingFileIndex].count += randomCount;
+//       // Add this file to our mock files if it doesn't exist
+//       const existingFileIndex = mockFiles.findIndex(f => f.filename === filename);
+//       if (existingFileIndex === -1) {
+//         mockFiles.push({ filename, count: randomCount });
+//       } else {
+//         mockFiles[existingFileIndex].count += randomCount;
+//       }
+      
+//       // Add mock contacts for this file
+//       for (let i = 0; i < randomCount; i++) {
+//         const randomPhone = `+${Math.floor(Math.random() * 10000000000)}`;
+//         mockContacts.push({
+//           id: Math.floor(Math.random() * 10000),
+//           phone: randomPhone,
+//           source_file: filename,
+//           is_active: Math.random() > 0.2, // 80% chance of being active
+//           created_at: new Date().toISOString()
+//         });
+//       }
+      
+//       return {
+//         filename,
+//         originalname: file.name,
+//         total: randomCount,
+//         unique: randomCount
+//       };
+//     }
+//   },
+// };
+
+
+// services/api.ts
+// services/api.ts
+// services/api.ts
+const BASE_URL = "http://127.0.0.1:8000/api/contacts";
+
+export const contactsAPI = {
+  // Get contacts with pagination - CORRECTED
+  getAll: async (page: number = 1, pageSize: number = 10) => {
+    // ✅ Remove extra /contacts/
+    const url = `${BASE_URL}/?page=${page}&page_size=${pageSize}`;
+    console.log('Fetching contacts from:', url);
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch contacts: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // Upload file - CORRECTED
+  uploadFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/files/upload/`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    return response.json();
+  },
+
+  // Get contact files - CORRECTED
+  getFiles: async () => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/files/`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch files');
+    }
+    return response.json();
+  },
+
+  // Get contacts by file - CORRECTED
+  getContactsByFile: async (filename: string, page: number = 1, pageSize: number = 10) => {
+    try {
+      // ✅ Remove extra /contacts/
+      const url = `${BASE_URL}/files/${filename}/?page=${page}&page_size=${pageSize}`;
+      console.log('Fetching file contacts from:', url);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file contacts: ${response.status}`);
       }
       
-      // Add mock contacts for this file
-      for (let i = 0; i < randomCount; i++) {
-        const randomPhone = `+${Math.floor(Math.random() * 10000000000)}`;
-        mockContacts.push({
-          id: Math.floor(Math.random() * 10000),
-          phone: randomPhone,
-          source_file: filename,
-          is_active: Math.random() > 0.2, // 80% chance of being active
-          created_at: new Date().toISOString()
-        });
-      }
-      
-      return {
-        filename,
-        originalname: file.name,
-        total: randomCount,
-        unique: randomCount
-      };
+      const data = await response.json();
+      console.log('Raw file contacts response:', data);
+      return data;
+    } catch (error) {
+      console.error('Error in getContactsByFile:', error);
+      throw error;
     }
   },
+
+  // Delete contacts by file - CORRECTED
+  removeContactsByFile: async (filename: string) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/files/${filename}/delete/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+    return response.json();
+  },
+
+  // Update contact - CORRECTED
+  update: async (id: number, data: { phone: string }) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/${id}/update/`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Update failed');
+    }
+    return response.json();
+  },
+
+  // Delete contact - CORRECTED
+  remove: async (id: number) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/${id}/delete/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+    return response.json();
+  },
+
+  // Create contact - CORRECTED
+  create: async (data: { phone: string }) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/create/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Create failed');
+    }
+    return response.json();
+  }
+};
+// Campaigns API (yeh add karo)
+export const campaignsAPI = {
+  // Get all campaigns
+  getAll: async () => {
+    const response = await fetch(`${BASE_URL}/campaigns/`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch campaigns');
+    }
+    return response.json();
+  },
+
+  // Get campaign by ID
+  getById: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch campaign');
+    }
+    return response.json();
+  },
+
+  // Create campaign
+  create: async (data: any) => {
+    const response = await fetch(`${BASE_URL}/campaigns/create/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Create failed');
+    }
+    return response.json();
+  },
+
+  // Update campaign
+  update: async (id: number, data: any) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/update/`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Update failed');
+    }
+    return response.json();
+  },
+
+  // Delete campaign
+  delete: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/delete/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+    return response.json();
+  },
+
+  // Start campaign
+  start: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/start/`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('Start failed');
+    }
+    return response.json();
+  },
+
+  // Stop campaign
+  stop: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/stop/`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('Stop failed');
+    }
+    return response.json();
+  }
 };
