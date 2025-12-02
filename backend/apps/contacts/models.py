@@ -1,7 +1,4 @@
 from django.db import models
-
- 
-from django.db import models
 from django.conf import settings
 
 class Contact(models.Model):
@@ -29,3 +26,6 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.phone}"
+
+    class Meta:
+        app_label = 'contacts'  # ✅ YEH LINE ADD KARO

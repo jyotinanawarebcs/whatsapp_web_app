@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosProgressEvent } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -914,7 +914,7 @@ const mockFiles = [
 // services/api.ts
 // services/api.ts
 // services/api.ts
-const BASE_URL = "http://127.0.0.1:8000/api/contacts";
+const BASE_URL = "http://127.0.0.1:8000/api";
 
 export const contactsAPI = {
   // Get contacts with pagination - CORRECTED
@@ -1115,5 +1115,235 @@ export const campaignsAPI = {
       throw new Error('Stop failed');
     }
     return response.json();
+  }
+};
+
+// ==================== AUTOMATIONS API ====================
+
+export interface Automation {
+  id: number;
+  name: string;
+  campaign_name: string;
+  automation_type: 'birthday' | 'festival' | 'reminder' | 'followup' | 'custom';
+  status: 'active' | 'paused' | 'draft';
+  schedule_type: 'daily' | 'weekly' | 'monthly' | 'specific_date' | 'on_event';
+  cron_expression?: string | null;
+  specific_time?: string | null;
+  specific_date?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  message_template: string;
+  target_contacts: number[];
+  target_groups: string[];
+  send_to_all: boolean;
+  cta_buttons: Array<{
+    type: string;
+    text: string;
+    url?: string;
+    payload?: string;
+  }>;
+  messages_sent: number;
+  last_run?: string | null;
+  next_run?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAutomationData {
+  name: string;
+  campaign_name?: string;
+  automation_type: 'birthday' | 'festival' | 'reminder' | 'followup' | 'custom';
+  status?: 'active' | 'paused' | 'draft';
+  schedule_type: 'daily' | 'weekly' | 'monthly' | 'specific_date' | 'on_event';
+  cron_expression?: string;
+  specific_time?: string;
+  specific_date?: string;
+  start_date?: string;
+  end_date?: string;
+  message_template: string;
+  target_contacts?: number[];
+  target_groups?: string[];
+  send_to_all?: boolean;
+  cta_buttons?: Array<{
+    type: string;
+    text: string;
+    url?: string;
+    payload?: string;
+  }>;
+}
+
+export interface UpdateAutomationData extends Partial<CreateAutomationData> {}
+
+export interface AutomationStats {
+  active_automations: number;
+  scheduled_today: number;
+  total_sent: number;
+}
+
+export interface AutomationLog {
+  id: number;
+  automation: number;
+  run_time: string;
+  status: 'success' | 'failed' | 'partial';
+  messages_sent: number;
+  total_contacts: number;
+  error_log?: string | null;
+}
+
+// Automations API
+export const automationsAPI = {
+  // Get all automations
+  getAll: async (): Promise<Automation[]> => {
+    try {
+      const response = await api.get('/automations/');
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch automations:', error);
+      // Return empty array for development
+      return [];
+    }
+  },
+
+  // Get single automation
+  getById: async (id: number): Promise<Automation> => {
+    try {
+      const response = await api.get(`/automations/${id}/`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to fetch automation');
+    }
+  },
+
+  // Create new automation
+  create: async (data: CreateAutomationData): Promise<Automation> => {
+    try {
+      const response = await api.post('/automations/', data);
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Failed to create automation';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Update automation
+  update: async (id: number, data: UpdateAutomationData): Promise<Automation> => {
+    try {
+      const response = await api.put(`/automations/${id}/`, data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to update automation');
+    }
+  },
+
+  // Delete automation
+  delete: async (id: number): Promise<void> => {
+    try {
+      await api.delete(`/automations/${id}/`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to delete automation');
+    }
+  },
+
+  // Toggle automation status
+  toggleStatus: async (id: number): Promise<{ status: string; message: string }> => {
+    try {
+      const response = await api.post(`/automations/${id}/toggle_status/`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to toggle automation status');
+    }
+  },
+
+  // Run automation immediately
+  runNow: async (id: number): Promise<{ message: string }> => {
+    try {
+      const response = await api.post(`/automations/${id}/run_now/`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to run automation');
+    }
+  },
+
+  // Get automation statistics
+  getStats: async (): Promise<AutomationStats> => {
+    try {
+      const response = await api.get('/automations/stats/');
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch stats:', error);
+      // Return default stats for development
+      return {
+        active_automations: 0,
+        scheduled_today: 0,
+        total_sent: 0
+      };
+    }
+  },
+};
+
+// Utility functions
+export const formatAutomationType = (type: string): string => {
+  const types: Record<string, string> = {
+    'birthday': 'Birthday',
+    'festival': 'Festival',
+    'reminder': 'Reminder',
+    'followup': 'Follow-up',
+    'custom': 'Custom'
+  };
+  return types[type] || type;
+};
+
+export const formatStatus = (status: string): string => {
+  const statuses: Record<string, string> = {
+    'active': 'Active',
+    'paused': 'Paused',
+    'draft': 'Draft'
+  };
+  return statuses[status] || status;
+};
+
+export const getStatusColor = (status: string): { bg: string; text: string; border: string } => {
+  const colors: Record<string, { bg: string; text: string; border: string }> = {
+    'active': { 
+      bg: 'bg-success/10', 
+      text: 'text-success', 
+      border: 'border-success/20' 
+    },
+    'paused': { 
+      bg: 'bg-warning/10', 
+      text: 'text-warning', 
+      border: 'border-warning/20' 
+    },
+    'draft': { 
+      bg: 'bg-muted', 
+      text: 'text-muted-foreground', 
+      border: 'border-muted' 
+    },
+  };
+  return colors[status] || colors.draft;
+};
+
+export const formatDate = (dateString: string | null): string => {
+  if (!dateString) return 'Never';
+  
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  } catch (error) {
+    return dateString;
   }
 };

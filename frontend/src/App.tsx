@@ -55,9 +55,9 @@ const App = () => {
             {/* Protected routes with AppLayout */}
             <Route
               element={
-                <ProtectedRoute>
+                // <ProtectedRoute>
                   <AppLayout />
-                </ProtectedRoute>
+                // </ProtectedRoute>
               }
             >
               <Route path="/" element={<Dashboard />} />
