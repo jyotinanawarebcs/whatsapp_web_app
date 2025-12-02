@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosProgressEvent } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -728,57 +728,57 @@ const getFixedDashboardStats = () => {
   };
 };
 
-export const campaignsAPI = {
-  getAll: async (): Promise<Campaign[]> => {
-    const res = await api.get<Campaign[]>('/campaigns');
-    return res.data;
-  },
+// export const campaignsAPI = {
+//   getAll: async (): Promise<Campaign[]> => {
+//     const res = await api.get<Campaign[]>('/campaigns');
+//     return res.data;
+//   },
 
-  getById: async (id: number): Promise<Campaign> => {
-    const res = await api.get<Campaign>(`/campaigns/${id}`);
-    return res.data;
-  },
+//   getById: async (id: number): Promise<Campaign> => {
+//     const res = await api.get<Campaign>(`/campaigns/${id}`);
+//     return res.data;
+//   },
 
-  getRecent: async (limit = 4): Promise<Campaign[]> => {
-    const res = await api.get<Campaign[]>(`/campaigns/recent?limit=${limit}`);
-    return res.data;
-  },
+//   getRecent: async (limit = 4): Promise<Campaign[]> => {
+//     const res = await api.get<Campaign[]>(`/campaigns/recent?limit=${limit}`);
+//     return res.data;
+//   },
 
-  getDashboardStats: async () => {
-    const res = await api.get('/campaigns/stats');
-    return res.data;
-  },
+//   getDashboardStats: async () => {
+//     const res = await api.get('/campaigns/stats');
+//     return res.data;
+//   },
 
-  getActive: async (): Promise<Campaign[]> => {
-    const res = await api.get<Campaign[]>('/campaigns/active-campaigns');
-    return res.data;
-  },
+//   getActive: async (): Promise<Campaign[]> => {
+//     const res = await api.get<Campaign[]>('/campaigns/active-campaigns');
+//     return res.data;
+//   },
 
-  create: async (payload: CampaignPayload): Promise<Campaign> => {
-    const res = await api.post<Campaign>('/campaigns/create', payload);
-    return res.data;
-  },
+//   create: async (payload: CampaignPayload): Promise<Campaign> => {
+//     const res = await api.post<Campaign>('/campaigns/create', payload);
+//     return res.data;
+//   },
 
-  run: async (payload: RunCampaignPayload): Promise<RunCampaignResponse> => {
-    const res = await api.post<RunCampaignResponse>('/campaigns/run', payload);
-    return res.data;
-  },
+//   run: async (payload: RunCampaignPayload): Promise<RunCampaignResponse> => {
+//     const res = await api.post<RunCampaignResponse>('/campaigns/run', payload);
+//     return res.data;
+//   },
 
-  update: async (id: number, payload: Partial<CampaignPayload>): Promise<Campaign> => {
-    const res = await api.patch<Campaign>(`/campaigns/${id}`, payload);
-    return res.data;
-  },
+//   update: async (id: number, payload: Partial<CampaignPayload>): Promise<Campaign> => {
+//     const res = await api.patch<Campaign>(`/campaigns/${id}`, payload);
+//     return res.data;
+//   },
 
-  updateStatus: async (id: number, status: CampaignStatus): Promise<Campaign> => {
-    const res = await api.put<Campaign>(`/campaigns/${id}/status`, { status });
-    return res.data;
-  },
+//   updateStatus: async (id: number, status: CampaignStatus): Promise<Campaign> => {
+//     const res = await api.put<Campaign>(`/campaigns/${id}/status`, { status });
+//     return res.data;
+//   },
 
-  remove: async (id: number) => {
-    const res = await api.delete(`/campaigns/${id}`);
-    return res.data;
-  },
-};
+//   remove: async (id: number) => {
+//     const res = await api.delete(`/campaigns/${id}`);
+//     return res.data;
+//   },
+// };
 
 // Mock data for when backend is not ready
 const mockContacts = [
@@ -795,117 +795,555 @@ const mockFiles = [
   { filename: "sample_file_3.txt", count: 1 },
 ];
 
-export const contactsAPI = {
-  getAll: async () => {
-    try {
-      const res = await api.get("/contacts");
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock contacts data");
-      return mockContacts;
-    }
-  },
+// export const contactsAPI = {
+//   getAll: async () => {
+//     try {
+//       const res = await api.get("/contacts");
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock contacts data");
+//       return mockContacts;
+//     }
+//   },
   
-  create: async (data) => {
-    try {
-      const res = await api.post("/contacts", data);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for create");
-      return { ...data, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
-    }
-  },
-  update: async (id, data) => {
-    try {
-      const res = await api.put(`/contacts/${id}`, data);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for update");
-      return { id, ...data };
-    }
-  },
-  remove: async (id) => {
-    try {
-      const res = await api.delete(`/contacts/${id}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for remove");
-      return { id };
-    }
-  },
-  getFiles: async (queryParams = '') => {
-    try {
-      const res = await api.get(`/contacts/files${queryParams}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock files data");
-      return mockFiles;
-    }
-  },
-  getContactsByFile: async (filename) => {
-    try {
-      const res = await api.get(`/contacts/file/${encodeURIComponent(filename)}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for getContactsByFile");
-      return mockContacts.filter(contact => contact.source_file === filename);
-    }
-  },
-  removeContactsByFile: async (filename) => {
-    try {
-      const res = await api.delete(`/contacts/file/${encodeURIComponent(filename)}`);
-      return res.data;
-    } catch (error) {
-      console.warn("Backend not ready, using mock data for removeContactsByFile");
-      const count = mockContacts.filter(contact => contact.source_file === filename).length;
-      return { success: true, count, message: `Successfully deleted ${count} contacts from ${filename}` };
-    }
-  },
-  uploadFile: async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+//   create: async (data) => {
+//     try {
+//       const res = await api.post("/contacts", data);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for create");
+//       return { ...data, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
+//     }
+//   },
+//   update: async (id, data) => {
+//     try {
+//       const res = await api.put(`/contacts/${id}`, data);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for update");
+//       return { id, ...data };
+//     }
+//   },
+//   remove: async (id) => {
+//     try {
+//       const res = await api.delete(`/contacts/${id}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for remove");
+//       return { id };
+//     }
+//   },
+//   getFiles: async (queryParams = '') => {
+//     try {
+//       const res = await api.get(`/contacts/files${queryParams}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock files data");
+//       return mockFiles;
+//     }
+//   },
+//   getContactsByFile: async (filename) => {
+//     try {
+//       const res = await api.get(`/contacts/file/${encodeURIComponent(filename)}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for getContactsByFile");
+//       return mockContacts.filter(contact => contact.source_file === filename);
+//     }
+//   },
+//   removeContactsByFile: async (filename) => {
+//     try {
+//       const res = await api.delete(`/contacts/file/${encodeURIComponent(filename)}`);
+//       return res.data;
+//     } catch (error) {
+//       console.warn("Backend not ready, using mock data for removeContactsByFile");
+//       const count = mockContacts.filter(contact => contact.source_file === filename).length;
+//       return { success: true, count, message: `Successfully deleted ${count} contacts from ${filename}` };
+//     }
+//   },
+//   uploadFile: async (file) => {
+//     try {
+//       const formData = new FormData();
+//       formData.append('file', file);
       
-      const res = await api.post("/contacts/upload", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        // Increase timeout for large files
-        timeout: 30000,
-      });
-      return res.data;
+//       const res = await api.post("/contacts/upload", formData, {
+//         headers: {
+//           'Content-Type': 'multipart/form-data',
+//         },
+//         // Increase timeout for large files
+//         timeout: 30000,
+//       });
+//       return res.data;
+//     } catch (error: any) {
+//       console.warn("Backend not ready, using mock data for file upload");
+//       // Create a mock response for file upload
+//       const filename = file.name;
+//       const randomCount = Math.floor(Math.random() * 20) + 5; // Random number between 5 and 25
+      
+//       // Add this file to our mock files if it doesn't exist
+//       const existingFileIndex = mockFiles.findIndex(f => f.filename === filename);
+//       if (existingFileIndex === -1) {
+//         mockFiles.push({ filename, count: randomCount });
+//       } else {
+//         mockFiles[existingFileIndex].count += randomCount;
+//       }
+      
+//       // Add mock contacts for this file
+//       for (let i = 0; i < randomCount; i++) {
+//         const randomPhone = `+${Math.floor(Math.random() * 10000000000)}`;
+//         mockContacts.push({
+//           id: Math.floor(Math.random() * 10000),
+//           phone: randomPhone,
+//           source_file: filename,
+//           is_active: Math.random() > 0.2, // 80% chance of being active
+//           created_at: new Date().toISOString()
+//         });
+//       }
+      
+//       return {
+//         filename,
+//         originalname: file.name,
+//         total: randomCount,
+//         unique: randomCount
+//       };
+//     }
+//   },
+// };
+
+
+// services/api.ts
+// services/api.ts
+// services/api.ts
+const BASE_URL = "http://127.0.0.1:8000/api";
+
+export const contactsAPI = {
+  // Get contacts with pagination - CORRECTED
+  getAll: async (page: number = 1, pageSize: number = 10) => {
+    // ✅ Remove extra /contacts/
+    const url = `${BASE_URL}/?page=${page}&page_size=${pageSize}`;
+    console.log('Fetching contacts from:', url);
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch contacts: ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // Upload file - CORRECTED
+  uploadFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/files/upload/`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    return response.json();
+  },
+
+  // Get contact files - CORRECTED
+  getFiles: async () => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/files/`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch files');
+    }
+    return response.json();
+  },
+
+  // Get contacts by file - CORRECTED
+  getContactsByFile: async (filename: string, page: number = 1, pageSize: number = 10) => {
+    try {
+      // ✅ Remove extra /contacts/
+      const url = `${BASE_URL}/files/${filename}/?page=${page}&page_size=${pageSize}`;
+      console.log('Fetching file contacts from:', url);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file contacts: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Raw file contacts response:', data);
+      return data;
+    } catch (error) {
+      console.error('Error in getContactsByFile:', error);
+      throw error;
+    }
+  },
+
+  // Delete contacts by file - CORRECTED
+  removeContactsByFile: async (filename: string) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/files/${filename}/delete/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+    return response.json();
+  },
+
+  // Update contact - CORRECTED
+  update: async (id: number, data: { phone: string }) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/${id}/update/`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Update failed');
+    }
+    return response.json();
+  },
+
+  // Delete contact - CORRECTED
+  remove: async (id: number) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/${id}/delete/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+    return response.json();
+  },
+
+  // Create contact - CORRECTED
+  create: async (data: { phone: string }) => {
+    // ✅ Remove extra /contacts/
+    const response = await fetch(`${BASE_URL}/create/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Create failed');
+    }
+    return response.json();
+  }
+};
+// Campaigns API (yeh add karo)
+export const campaignsAPI = {
+  // Get all campaigns
+  getAll: async () => {
+    const response = await fetch(`${BASE_URL}/campaigns/`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch campaigns');
+    }
+    return response.json();
+  },
+
+  // Get campaign by ID
+  getById: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch campaign');
+    }
+    return response.json();
+  },
+
+  // Create campaign
+  create: async (data: any) => {
+    const response = await fetch(`${BASE_URL}/campaigns/create/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Create failed');
+    }
+    return response.json();
+  },
+
+  // Update campaign
+  update: async (id: number, data: any) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/update/`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Update failed');
+    }
+    return response.json();
+  },
+
+  // Delete campaign
+  delete: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/delete/`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Delete failed');
+    }
+    return response.json();
+  },
+
+  // Start campaign
+  start: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/start/`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('Start failed');
+    }
+    return response.json();
+  },
+
+  // Stop campaign
+  stop: async (id: number) => {
+    const response = await fetch(`${BASE_URL}/campaigns/${id}/stop/`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('Stop failed');
+    }
+    return response.json();
+  }
+};
+
+// ==================== AUTOMATIONS API ====================
+
+export interface Automation {
+  id: number;
+  name: string;
+  campaign_name: string;
+  automation_type: 'birthday' | 'festival' | 'reminder' | 'followup' | 'custom';
+  status: 'active' | 'paused' | 'draft';
+  schedule_type: 'daily' | 'weekly' | 'monthly' | 'specific_date' | 'on_event';
+  cron_expression?: string | null;
+  specific_time?: string | null;
+  specific_date?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  message_template: string;
+  target_contacts: number[];
+  target_groups: string[];
+  send_to_all: boolean;
+  cta_buttons: Array<{
+    type: string;
+    text: string;
+    url?: string;
+    payload?: string;
+  }>;
+  messages_sent: number;
+  last_run?: string | null;
+  next_run?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAutomationData {
+  name: string;
+  campaign_name?: string;
+  automation_type: 'birthday' | 'festival' | 'reminder' | 'followup' | 'custom';
+  status?: 'active' | 'paused' | 'draft';
+  schedule_type: 'daily' | 'weekly' | 'monthly' | 'specific_date' | 'on_event';
+  cron_expression?: string;
+  specific_time?: string;
+  specific_date?: string;
+  start_date?: string;
+  end_date?: string;
+  message_template: string;
+  target_contacts?: number[];
+  target_groups?: string[];
+  send_to_all?: boolean;
+  cta_buttons?: Array<{
+    type: string;
+    text: string;
+    url?: string;
+    payload?: string;
+  }>;
+}
+
+export interface UpdateAutomationData extends Partial<CreateAutomationData> {}
+
+export interface AutomationStats {
+  active_automations: number;
+  scheduled_today: number;
+  total_sent: number;
+}
+
+export interface AutomationLog {
+  id: number;
+  automation: number;
+  run_time: string;
+  status: 'success' | 'failed' | 'partial';
+  messages_sent: number;
+  total_contacts: number;
+  error_log?: string | null;
+}
+
+// Automations API
+export const automationsAPI = {
+  // Get all automations
+  getAll: async (): Promise<Automation[]> => {
+    try {
+      const response = await api.get('/automations/');
+      return response.data;
     } catch (error: any) {
-      console.warn("Backend not ready, using mock data for file upload");
-      // Create a mock response for file upload
-      const filename = file.name;
-      const randomCount = Math.floor(Math.random() * 20) + 5; // Random number between 5 and 25
-      
-      // Add this file to our mock files if it doesn't exist
-      const existingFileIndex = mockFiles.findIndex(f => f.filename === filename);
-      if (existingFileIndex === -1) {
-        mockFiles.push({ filename, count: randomCount });
-      } else {
-        mockFiles[existingFileIndex].count += randomCount;
-      }
-      
-      // Add mock contacts for this file
-      for (let i = 0; i < randomCount; i++) {
-        const randomPhone = `+${Math.floor(Math.random() * 10000000000)}`;
-        mockContacts.push({
-          id: Math.floor(Math.random() * 10000),
-          phone: randomPhone,
-          source_file: filename,
-          is_active: Math.random() > 0.2, // 80% chance of being active
-          created_at: new Date().toISOString()
-        });
-      }
-      
+      console.error('Failed to fetch automations:', error);
+      // Return empty array for development
+      return [];
+    }
+  },
+
+  // Get single automation
+  getById: async (id: number): Promise<Automation> => {
+    try {
+      const response = await api.get(`/automations/${id}/`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to fetch automation');
+    }
+  },
+
+  // Create new automation
+  create: async (data: CreateAutomationData): Promise<Automation> => {
+    try {
+      const response = await api.post('/automations/', data);
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || 
+                          error.response?.data?.message || 
+                          'Failed to create automation';
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Update automation
+  update: async (id: number, data: UpdateAutomationData): Promise<Automation> => {
+    try {
+      const response = await api.put(`/automations/${id}/`, data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to update automation');
+    }
+  },
+
+  // Delete automation
+  delete: async (id: number): Promise<void> => {
+    try {
+      await api.delete(`/automations/${id}/`);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to delete automation');
+    }
+  },
+
+  // Toggle automation status
+  toggleStatus: async (id: number): Promise<{ status: string; message: string }> => {
+    try {
+      const response = await api.post(`/automations/${id}/toggle_status/`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to toggle automation status');
+    }
+  },
+
+  // Run automation immediately
+  runNow: async (id: number): Promise<{ message: string }> => {
+    try {
+      const response = await api.post(`/automations/${id}/run_now/`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to run automation');
+    }
+  },
+
+  // Get automation statistics
+  getStats: async (): Promise<AutomationStats> => {
+    try {
+      const response = await api.get('/automations/stats/');
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch stats:', error);
+      // Return default stats for development
       return {
-        filename,
-        originalname: file.name,
-        total: randomCount,
-        unique: randomCount
+        active_automations: 0,
+        scheduled_today: 0,
+        total_sent: 0
       };
     }
   },
+};
+
+// Utility functions
+export const formatAutomationType = (type: string): string => {
+  const types: Record<string, string> = {
+    'birthday': 'Birthday',
+    'festival': 'Festival',
+    'reminder': 'Reminder',
+    'followup': 'Follow-up',
+    'custom': 'Custom'
+  };
+  return types[type] || type;
+};
+
+export const formatStatus = (status: string): string => {
+  const statuses: Record<string, string> = {
+    'active': 'Active',
+    'paused': 'Paused',
+    'draft': 'Draft'
+  };
+  return statuses[status] || status;
+};
+
+export const getStatusColor = (status: string): { bg: string; text: string; border: string } => {
+  const colors: Record<string, { bg: string; text: string; border: string }> = {
+    'active': { 
+      bg: 'bg-success/10', 
+      text: 'text-success', 
+      border: 'border-success/20' 
+    },
+    'paused': { 
+      bg: 'bg-warning/10', 
+      text: 'text-warning', 
+      border: 'border-warning/20' 
+    },
+    'draft': { 
+      bg: 'bg-muted', 
+      text: 'text-muted-foreground', 
+      border: 'border-muted' 
+    },
+  };
+  return colors[status] || colors.draft;
+};
+
+export const formatDate = (dateString: string | null): string => {
+  if (!dateString) return 'Never';
+  
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return `Today at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays === 1) {
+      return `Yesterday at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  } catch (error) {
+    return dateString;
+  }
 };

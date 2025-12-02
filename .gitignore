@@ -1,0 +1,25 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Build files
+dist/
+build/
+
+# React
+.env
+.env.local
+.env.development
+.env.production
+
+# Django
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+media/
+staticfiles/
+
+# OS files
+.DS_Store
+Thumbs.db
