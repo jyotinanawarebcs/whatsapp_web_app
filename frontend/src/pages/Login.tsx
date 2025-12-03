@@ -30,6 +30,7 @@ const Login = () => {
       });
 
       login(response.user, response.token);
+      localStorage.setItem("access", response.token);
 
       toast({
         title: "Login successful",
@@ -82,20 +83,23 @@ const Login = () => {
 
       toast({
         title: "Registration successful",
-        description: `Welcome, ${response.user.username}!`,
+        description: `Admin ${response.user.username} registered successfully!`,
       });
 
       navigate("/");
     } catch (error: any) {
       toast({
         title: "Registration failed",
-        description: error.message || "Unable to create account. Please try again.",
+        description:
+          error.message ||
+          "You are not authorized to register new admins. Only admins can register.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen w-full bg-gradient-to-br from-primary/10 via-background to-purple-600/5 px-4 py-8">

@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type { AxiosProgressEvent } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -185,24 +187,72 @@ export const mediaAPI = {
 
 // Real API for PostgreSQL backend authentication
 export const authAPI = {
+  // ✅ LOGIN: Works for admin and user
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/login', credentials);
-      return response.data;
+      const response = await api.post('/api/users/login/', credentials);
+      const data = response.data;
+
+      // Save tokens to local storage
+      localStorage.setItem('access', data.tokens.access);
+      localStorage.setItem('refresh', data.tokens.refresh);
+
+      return {
+        user: {
+          id: data.user.id,
+          username: data.user.username,
+          email: data.user?.email || '',
+          role: data.user.is_staff ? 'admin' : 'user',
+        },
+        token: data.tokens.access,
+      };
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Invalid credentials');
+      throw new Error(error.response?.data?.error || 'Invalid credentials');
     }
   },
 
+  // ✅ REGISTER: Only admins can register other admins (needs token)
   register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/auth/register', credentials);
-      return response.data;
+      const response = await api.post('/users/register/', {
+        username: credentials.username,
+        password: credentials.password,
+        email: credentials.email,
+      });
+      const data = response.data;
+
+      return {
+        user: {
+          id: data.user.id,
+          username: data.user.username,
+          email: data.user?.email || '',
+          role: 'admin',
+        },
+        token: '',
+      };
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
+      throw new Error(error.response?.data?.detail || 'Registration failed. Only admin can register.');
     }
   },
-  
+
+  // ✅ OPTIONAL: Refresh JWT token
+  refreshToken: async (): Promise<string> => {
+    const refresh = localStorage.getItem('refresh');
+    if (!refresh) throw new Error('No refresh token available');
+
+    try {
+      const response = await api.post('/api/token/refresh/', { refresh });
+      const newAccess = response.data.access;
+      localStorage.setItem('access', newAccess);
+      return newAccess;
+    } catch (error: any) {
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      throw new Error('Session expired. Please log in again.');
+    }
+  },
+
+
   logout: async (): Promise<void> => {
     try {
       await api.post('/auth/logout');
@@ -489,7 +539,7 @@ export const templatesAPI = {
   },
 
   listApproved: async (): Promise<MessageTemplate[]> => {
-    const response = await api.get<MessageTemplate[]>('/templates/approved');
+    const response = await api.get<MessageTemplate[]>('/approved');
     return response.data;
   },
 
@@ -806,65 +856,65 @@ const mockFiles = [
 //     }
 //   },
   
-//   create: async (data) => {
-//     try {
-//       const res = await api.post("/contacts", data);
-//       return res.data;
-//     } catch (error) {
-//       console.warn("Backend not ready, using mock data for create");
-//       return { ...data, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
-//     }
-//   },
-//   update: async (id, data) => {
-//     try {
-//       const res = await api.put(`/contacts/${id}`, data);
-//       return res.data;
-//     } catch (error) {
-//       console.warn("Backend not ready, using mock data for update");
-//       return { id, ...data };
-//     }
-//   },
-//   remove: async (id) => {
-//     try {
-//       const res = await api.delete(`/contacts/${id}`);
-//       return res.data;
-//     } catch (error) {
-//       console.warn("Backend not ready, using mock data for remove");
-//       return { id };
-//     }
-//   },
-//   getFiles: async (queryParams = '') => {
-//     try {
-//       const res = await api.get(`/contacts/files${queryParams}`);
-//       return res.data;
-//     } catch (error) {
-//       console.warn("Backend not ready, using mock files data");
-//       return mockFiles;
-//     }
-//   },
-//   getContactsByFile: async (filename) => {
-//     try {
-//       const res = await api.get(`/contacts/file/${encodeURIComponent(filename)}`);
-//       return res.data;
-//     } catch (error) {
-//       console.warn("Backend not ready, using mock data for getContactsByFile");
-//       return mockContacts.filter(contact => contact.source_file === filename);
-//     }
-//   },
-//   removeContactsByFile: async (filename) => {
-//     try {
-//       const res = await api.delete(`/contacts/file/${encodeURIComponent(filename)}`);
-//       return res.data;
-//     } catch (error) {
-//       console.warn("Backend not ready, using mock data for removeContactsByFile");
-//       const count = mockContacts.filter(contact => contact.source_file === filename).length;
-//       return { success: true, count, message: `Successfully deleted ${count} contacts from ${filename}` };
-//     }
-//   },
-//   uploadFile: async (file) => {
-//     try {
-//       const formData = new FormData();
-//       formData.append('file', file);
+  // create: async (data) => {
+  //   try {
+  //     const res = await api.post("/contacts", data);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.warn("Backend not ready, using mock data for create");
+  //     return { ...data, id: Math.floor(Math.random() * 1000), created_at: new Date().toISOString() };
+  //   }
+  // },
+  // update: async (id, data) => {
+  //   try {
+  //     const res = await api.put(`/contacts/${id}`, data);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.warn("Backend not ready, using mock data for update");
+  //     return { id, ...data };
+  //   }
+  // },
+  // remove: async (id) => {
+  //   try {
+  //     const res = await api.delete(`/contacts/${id}`);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.warn("Backend not ready, using mock data for remove");
+  //     return { id };
+  //   }
+  // },
+  // getFiles: async (queryParams = '') => {
+  //   try {
+  //     const res = await api.get(`/files${queryParams}`);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.warn("Backend not ready, using mock files data");
+  //     return mockFiles;
+  //   }
+  // },
+  // getContactsByFile: async (filename) => {
+  //   try {
+  //     const res = await api.get(`/file/${encodeURIComponent(filename)}`);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.warn("Backend not ready, using mock data for getContactsByFile");
+  //     return mockContacts.filter(contact => contact.source_file === filename);
+  //   }
+  // },
+  // removeContactsByFile: async (filename) => {
+  //   try {
+  //     const res = await api.delete(`/file/${encodeURIComponent(filename)}`);
+  //     return res.data;
+  //   } catch (error) {
+  //     console.warn("Backend not ready, using mock data for removeContactsByFile");
+  //     const count = mockContacts.filter(contact => contact.source_file === filename).length;
+  //     return { success: true, count, message: `Successfully deleted ${count} contacts from ${filename}` };
+  //   }
+  // },
+  // uploadFile: async (file) => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('file', file);
       
 //       const res = await api.post("/contacts/upload", formData, {
 //         headers: {

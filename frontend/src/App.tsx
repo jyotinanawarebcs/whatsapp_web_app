@@ -51,7 +51,7 @@ const App = () => {
               path="/login" 
               element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} 
             />
-
+      
             {/* Protected routes with AppLayout */}
             <Route
               element={

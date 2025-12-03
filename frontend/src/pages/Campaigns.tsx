@@ -32,7 +32,7 @@ const Campaigns = () => {
     if (shouldOpenCreate) {
       setOpenCreate(true);
       // Remove the query parameter to avoid reopening on refresh
-      navigate('/campaigns', { replace: true });
+      navigate('/api/campaigns', { replace: true });
     }
   }, [location, navigate]);
 
@@ -87,7 +87,8 @@ const Campaigns = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <main className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row 
+        sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold text-foreground">Campaigns</h1>
           <Button
             className="w-full sm:w-auto bg-primary hover:bg-primary/90"

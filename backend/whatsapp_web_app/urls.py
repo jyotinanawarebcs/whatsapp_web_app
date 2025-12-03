@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/', include('campaigns.urls')), 
     path('api/', include('virtualnumbers.urls')), 
     path('api/', include('dispatch.urls')), 
-    
     path('api/', include('automations.urls')),  # Only automations for now
+    path('api/', include('chat.urls')),
+    path('api/', include('accounts.urls')),
 ]

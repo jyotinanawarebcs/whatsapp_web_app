@@ -107,7 +107,7 @@ const Settings = () => {
   const [businessLoading, setBusinessLoading] = useState(true);
   const [businessSaving, setBusinessSaving] = useState(false);
 
-  const [virtualNumbers, setVirtualNumbers] = useState<VirtualNumber[]>([]);
+  const [virtualNumbers, setVirtualNumbers] = useState<any[]>([]);
   const [numbersLoading, setNumbersLoading] = useState(true);
   const [numbersRefreshing, setNumbersRefreshing] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -127,17 +127,28 @@ const Settings = () => {
 
   const [activeTab, setActiveTab] = useState<"business" | "virtual" | "templates">("business");
 
-  const rotationSummary = useMemo(() => {
-    const eligible = virtualNumbers.filter((item) => item.isPrimary);
-    const latestUsage = eligible
-      .map((item) => (item.lastUsedAt ? new Date(item.lastUsedAt).getTime() : 0))
-      .sort((a, b) => b - a)[0];
+  // const rotationSummary = useMemo(() => {
+  //   const eligible = virtualNumbers.filter((item) => item.isPrimary);
+  //   const latestUsage = eligible
+  //     .map((item) => (item.lastUsedAt ? new Date(item.lastUsedAt).getTime() : 0))
+  //     .sort((a, b) => b - a)[0];
 
-    return {
-      eligibleCount: eligible.length,
-      lastUsageLabel: latestUsage ? new Date(latestUsage).toLocaleString() : null,
-    };
-  }, [virtualNumbers]);
+  //   return {
+  //     eligibleCount: eligible.length,
+  //     lastUsageLabel: latestUsage ? new Date(latestUsage).toLocaleString() : null,
+  //   };
+  // }, [virtualNumbers]);
+  const rotationSummary = useMemo(() => {
+  const eligible = virtualNumbers.filter((item) => item.isPrimary);
+  const latestUsage = eligible
+    .map((item) => (item.lastUsedAt ? new Date(item.lastUsedAt).getTime() : 0))
+    .sort((a, b) => b - a)[0];
+
+  return {
+    eligibleCount: eligible.length,
+    lastUsageLabel: latestUsage ? new Date(latestUsage).toLocaleString() : null,
+  };
+}, [virtualNumbers]);
 
   useEffect(() => {
     void loadBusiness();
@@ -172,27 +183,50 @@ const Settings = () => {
     }
   };
 
-  const loadNumbers = async (showSpinner = true) => {
-    if (showSpinner) {
-      setNumbersLoading(true);
-    } else {
-      setNumbersRefreshing(true);
-    }
+  // const loadNumbers = async (showSpinner = true) => {
+  //   if (showSpinner) {
+  //     setNumbersLoading(true);
+  //   } else {
+  //     setNumbersRefreshing(true);
+  //   }
 
-    try {
-      const data = await numbersAPI.getVirtualNumbers();
-      setVirtualNumbers(data);
-    } catch (error: any) {
-      toast({
-        title: "Failed to load virtual numbers",
-        description: error.message || "Unable to fetch virtual numbers",
-        variant: "destructive",
-      });
-    } finally {
-      setNumbersLoading(false);
-      setNumbersRefreshing(false);
-    }
-  };
+  //   try {
+  //     const data = await numbersAPI.getVirtualNumbers();
+  //     setVirtualNumbers(data);
+  //   } catch (error: any) {
+  //     toast({
+  //       title: "Failed to load virtual numbers",
+  //       description: error.message || "Unable to fetch virtual numbers",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setNumbersLoading(false);
+  //     setNumbersRefreshing(false);
+  //   }
+  // };
+  const loadNumbers = async (showSpinner = true) => {
+  if (showSpinner) {
+    setNumbersLoading(true);
+  } else {
+    setNumbersRefreshing(true);
+  }
+
+  try {
+    const data = await numbersAPI.getVirtualNumbers();
+    // Ensure virtualNumbers is always an array
+    setVirtualNumbers(Array.isArray(data) ? data : []);
+  } catch (error: any) {
+    toast({
+      title: "Failed to load virtual numbers",
+      description: error.message || "Unable to fetch virtual numbers",
+      variant: "destructive",
+    });
+    setVirtualNumbers([]); // fallback to empty array
+  } finally {
+    setNumbersLoading(false);
+    setNumbersRefreshing(false);
+  }
+};
 
   const loadTemplates = async (showSpinner = true) => {
     if (showSpinner) {

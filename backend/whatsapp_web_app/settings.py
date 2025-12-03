@@ -7,6 +7,17 @@ import os
 from pathlib import Path
 from decouple import config
 
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+DEBUG = os.getenv("DEBUG", "False") == "True"
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_API_VERSION = os.getenv("WHATSAPP_API_VERSION", "v17.0")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 print(BASE_DIR)
@@ -37,6 +48,7 @@ INSTALLED_APPS = [
     'campaigns',
     'virtualnumbers',
     'automations',
+    'chat'
       # New automations app
 ]
 
@@ -69,7 +81,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'whatsapp_web_app.wsgi.application'
-
+AUTH_USER_MODEL = "accounts.CustomUser"
 # Database
 DATABASES = {
     'default': {
